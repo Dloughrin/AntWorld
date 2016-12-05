@@ -32,7 +32,7 @@ Server: socket opened on port 12321<br>
 Server: waiting for client connection.....<br>
 
 Then, start your client. To get started, you can use the sample client:<br>
-  antworld.client.ClientRandomWalk.main(String[] args)<br>
+  antworld.client.ClientDustinLoughrin.main(String[] args)<br>
 
   If args is null or length < 1, then the client will try to connect on localhost.
   Otherwise, args[0] will be used as the hostname.

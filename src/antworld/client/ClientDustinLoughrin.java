@@ -16,7 +16,7 @@ import antworld.common.NestNameEnum;
 import antworld.common.TeamNameEnum;
 import antworld.common.AntAction.AntActionType;
 
-public class ClientRandomWalk
+public class ClientDustinLoughrin
 {
   private static final boolean DEBUG = true;
   private final TeamNameEnum myTeam;
@@ -37,7 +37,7 @@ public class ClientRandomWalk
   private static Random random = Constants.random;
 
 
-  public ClientRandomWalk(String host, int portNumber, TeamNameEnum team)
+  public ClientDustinLoughrin(String host, int portNumber, TeamNameEnum team)
   {
     myTeam = team;
     System.out.println("Starting " + team +" on " + host + ":" + portNumber + " at "
@@ -58,13 +58,13 @@ public class ClientRandomWalk
     }
     catch (UnknownHostException e)
     {
-      System.err.println("ClientRandomWalk Error: Unknown Host " + host);
+      System.err.println("ClientDustinLoughrin Error: Unknown Host " + host);
       e.printStackTrace();
       return false;
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk Error: Could not open connection to " + host + " on port " + portNumber);
+      System.err.println("ClientDustinLoughrin Error: Could not open connection to " + host + " on port " + portNumber);
       e.printStackTrace();
       return false;
     }
@@ -77,7 +77,7 @@ public class ClientRandomWalk
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk Error: Could not open i/o streams");
+      System.err.println("ClientDustinLoughrin Error: Could not open i/o streams");
       e.printStackTrace();
       return false;
     }
@@ -88,7 +88,7 @@ public class ClientRandomWalk
 
   public void closeAll()
   {
-    System.out.println("ClientRandomWalk.closeAll()");
+    System.out.println("ClientDustinLoughrin.closeAll()");
     {
       try
       {
@@ -98,7 +98,7 @@ public class ClientRandomWalk
       }
       catch (IOException e)
       {
-        System.err.println("ClientRandomWalk Error: Could not close");
+        System.err.println("ClientDustinLoughrin Error: Could not close");
         e.printStackTrace();
       }
     }
@@ -118,42 +118,42 @@ public class ClientRandomWalk
       {
         try
         {
-          if (DEBUG) System.out.println("ClientRandomWalk: listening to socket....");
+          if (DEBUG) System.out.println("ClientDustinLoughrin: listening to socket....");
           data = (CommData) inputStream.readObject();
-          if (DEBUG) System.out.println("ClientRandomWalk: received <<<<<<<<<"+inputStream.available()+"<...\n" + data);
+          if (DEBUG) System.out.println("ClientDustinLoughrin: received <<<<<<<<<"+inputStream.available()+"<...\n" + data);
           
           if (data.errorMsg != null)
           {
-            System.err.println("ClientRandomWalk***ERROR***: " + data.errorMsg);
+            System.err.println("ClientDustinLoughrin***ERROR***: " + data.errorMsg);
             System.exit(0);
           }
         }
         catch (IOException e)
         {
-          System.err.println("ClientRandomWalk***ERROR***: client read failed");
+          System.err.println("ClientDustinLoughrin***ERROR***: client read failed");
           e.printStackTrace();
           System.exit(0);
         }
         catch (ClassNotFoundException e)
         {
-          System.err.println("ClientRandomWalk***ERROR***: client sent incorrect common format");
+          System.err.println("ClientDustinLoughrin***ERROR***: client sent incorrect common format");
         }
       }
     if (data.myTeam != myTeam)
     {
-      System.err.println("ClientRandomWalk***ERROR***: Server returned wrong team name: "+data.myTeam);
+      System.err.println("ClientDustinLoughrin***ERROR***: Server returned wrong team name: "+data.myTeam);
       System.exit(0);
     }
     if (data.myNest == null)
     {
-      System.err.println("ClientRandomWalk***ERROR***: Server returned NULL nest");
+      System.err.println("ClientDustinLoughrin***ERROR***: Server returned NULL nest");
       System.exit(0);
     }
 
     myNestName = data.myNest;
     centerX = data.nestData[myNestName.ordinal()].centerX;
     centerY = data.nestData[myNestName.ordinal()].centerY;
-    System.out.println("ClientRandomWalk: ==== Nest Assigned ===>: " + myNestName);
+    System.out.println("ClientDustinLoughrin: ==== Nest Assigned ===>: " + myNestName);
     return data;
   }
     
@@ -164,33 +164,33 @@ public class ClientRandomWalk
       try
       {
 
-        if (DEBUG) System.out.println("ClientRandomWalk: chooseActions: " + myNestName);
+        if (DEBUG) System.out.println("ClientDustinLoughrin: chooseActions: " + myNestName);
 
         chooseActionsOfAllAnts(data);  
 
         CommData sendData = data.packageForSendToServer();
         
-        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
+        System.out.println("ClientDustinLoughrin: Sending>>>>>>>: " + sendData);
         outputStream.writeObject(sendData);
         outputStream.flush();
         outputStream.reset();
        
 
-        if (DEBUG) System.out.println("ClientRandomWalk: listening to socket....");
+        if (DEBUG) System.out.println("ClientDustinLoughrin: listening to socket....");
         CommData receivedData = (CommData) inputStream.readObject();
-        if (DEBUG) System.out.println("ClientRandomWalk: received <<<<<<<<<"+inputStream.available()+"<...\n" + receivedData);
+        if (DEBUG) System.out.println("ClientDustinLoughrin: received <<<<<<<<<"+inputStream.available()+"<...\n" + receivedData);
         data = receivedData;
   
         
         
         if ((myNestName == null) || (data.myTeam != myTeam))
         {
-          System.err.println("ClientRandomWalk: !!!!ERROR!!!! " + myNestName);
+          System.err.println("ClientDustinLoughrin: !!!!ERROR!!!! " + myNestName);
         }
       }
       catch (IOException e)
       {
-        System.err.println("ClientRandomWalk***ERROR***: client read failed");
+        System.err.println("ClientDustinLoughrin***ERROR***: client read failed");
         e.printStackTrace();
         System.exit(0);
 
@@ -212,14 +212,14 @@ public class ClientRandomWalk
     CommData sendData = data.packageForSendToServer();
     try
     {
-      if (DEBUG) System.out.println("ClientRandomWalk.sendCommData(" + sendData +")");
+      if (DEBUG) System.out.println("ClientDustinLoughrin.sendCommData(" + sendData +")");
       outputStream.writeObject(sendData);
       outputStream.flush();
       outputStream.reset();
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk***ERROR***: client read failed");
+      System.err.println("ClientDustinLoughrin***ERROR***: client read failed");
       e.printStackTrace();
       System.exit(0);
     }
@@ -270,8 +270,24 @@ public class ClientRandomWalk
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
-    return false;
+    if(ant.carryUnits >= ((ant.antType.getCarryCapacity()/2)-1))
+    {
+      action.type = AntActionType.MOVE;
+      //go home code
+      return true;
+    }
+    else if(ant.health < ((double)ant.antType.getMaxHealth()/4.0))
+    {
+      action.type = AntActionType.MOVE;
+      //go home code
+      return true;
+    }
+    else return false;
   }
+
+  /*private boolean dropOffLoadAtNest(AntData ant, AntAction action) { return false; }
+
+  private boolean healAtNest(AntData ant, AntAction action) { return false; }*/
 
   private boolean pickUpWater(AntData ant, AntAction action)
   {
@@ -347,7 +363,7 @@ public class ClientRandomWalk
     { team = TeamNameEnum.getTeamByString(args[0]);
     }
 
-    new ClientRandomWalk(serverHost, Constants.PORT, team);
+    new ClientDustinLoughrin(serverHost, Constants.PORT, team);
   }
 
 }
