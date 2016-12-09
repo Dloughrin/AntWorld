@@ -270,24 +270,41 @@ public class ClientDustinLoughrin
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
+    if(ant.underground) return false;
+
     if(ant.carryUnits >= ((ant.antType.getCarryCapacity()/2)-1))
     {
       action.type = AntActionType.MOVE;
       //go home code
       return true;
     }
-    else if(ant.health < ((double)ant.antType.getMaxHealth()/4.0))
+    if(ant.health < ((double)ant.antType.getMaxHealth()/4.0))
     {
       action.type = AntActionType.MOVE;
       //go home code
       return true;
     }
-    else return false;
+
+    return false;
   }
 
-  /*private boolean dropOffLoadAtNest(AntData ant, AntAction action) { return false; }
+  private boolean dropOffLoadAtNest(AntData ant, AntAction action)
+  {
+    if(!ant.underground) return false;
 
-  private boolean healAtNest(AntData ant, AntAction action) { return false; }*/
+    action.type = AntActionType.DROP;
+
+    return false;
+  }
+
+  private boolean healAtNest(AntData ant, AntAction action)
+  {
+    if(!ant.underground) return false;
+
+    action.type = AntActionType.HEAL;
+
+    return false;
+  }
 
   private boolean pickUpWater(AntData ant, AntAction action)
   {
@@ -324,6 +341,10 @@ public class ClientDustinLoughrin
     
     if (ant.ticksUntilNextAction > 0) return action;
 
+    if (dropOffLoadAtNest(ant, action)) return action;
+
+    if (healAtNest(ant, action)) return action;
+
     if (exitNest(ant, action)) return action;
 
     if (attackAdjacent(ant, action)) return action;
@@ -358,7 +379,7 @@ public class ClientDustinLoughrin
     String serverHost = "localhost";
     if (args.length > 0) serverHost = args[args.length -1];
 
-    TeamNameEnum team = TeamNameEnum.RANDOM_WALKERS;
+    TeamNameEnum team = TeamNameEnum.Linh_Dustin;
     if (args.length > 1)
     { team = TeamNameEnum.getTeamByString(args[0]);
     }
