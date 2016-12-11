@@ -5,20 +5,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.Random;
 
-import antworld.common.AntAction;
-import antworld.common.AntData;
-import antworld.common.CommData;
-import antworld.common.Constants;
-import antworld.common.Direction;
-import antworld.common.NestNameEnum;
-import antworld.common.TeamNameEnum;
+import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
+import antworld.server.Ant;
+import antworld.server.Cell;
 
 public class ClientDustinLoughrin
 {
-  private static final boolean DEBUG = true;
+  private static final boolean DEBUG = false;
   private final TeamNameEnum myTeam;
   private static final long password = 962740848319L;//Each team has been assigned a random password.
   private ObjectInputStream inputStream = null;
@@ -26,7 +23,9 @@ public class ClientDustinLoughrin
   private boolean isConnected = false;
   private NestNameEnum myNestName = null;
   private int centerX, centerY;
- 
+
+  private MapData localMapData = new MapData();
+  private Pixel localMap[][] = localMapData.map;
 
   private Socket clientSocket;
 
@@ -260,41 +259,103 @@ public class ClientDustinLoughrin
 
   private boolean attackAdjacent(AntData ant, AntAction action)
   {
-    return false;
+    return false; //TODO:
   }
 
-  private boolean pickUpFoodAdjacent(AntData ant, AntAction action)
+  private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
   {
+    int x, y;
+    Pixel neighbor;
+
+    if(ant.carryUnits > 0)
+    {
+      if(ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
+      if(ant.carryType == FoodType.WATER)
+      {
+        action.direction = Direction.NORTH;
+        action.type = AntActionType.DROP;
+        action.quantity = ant.carryUnits;
+        return true;
+      }
+    }
+
+    for(Direction direction : Direction.values())
+    {
+      x = ant.gridX + direction.deltaX();
+      y = ant.gridY + direction.deltaY();
+      neighbor = localMap[x][y];
+
+      if(neighbor == null) continue;
+
+      if(neighbor.contains == 'w') continue;
+
+      if(neighbor.x == food.gridX && neighbor.y == food.gridY)
+      {
+        action.type = AntActionType.PICKUP;
+        action.direction = direction;
+
+        if(ant.antType.getCarryCapacity()/2 > (ant.carryUnits + food.getCount()))
+        {
+          action.quantity = food.getCount();
+          return true;
+        }
+        else
+        {
+          action.quantity = (ant.antType.getCarryCapacity() - ant.carryUnits)/2;
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
-    if(ant.underground) return false;
-
-    if(ant.carryUnits >= ((ant.antType.getCarryCapacity()/2)-1))
+    if((ant.carryUnits > 0
+            || (ant.health < ((double)ant.antType.getMaxHealth()/4.0))))
     {
-      action.type = AntActionType.MOVE;
-      //go home code
-      return true;
+      return goHome(ant, action);
     }
-    if(ant.health < ((double)ant.antType.getMaxHealth()/4.0))
-    {
-      action.type = AntActionType.MOVE;
-      //go home code
-      return true;
-    }
-
     return false;
+  }
+  private boolean goHome(AntData ant, AntAction action )
+  {
+    if(ant.underground && (ant.health < ant.antType.getMaxHealth()))
+    {
+      return healAtNest(ant, action);
+    }
+    if(ant.underground && (ant.carryUnits > 0))
+    {
+      return dropOffLoadAtNest(ant, action);
+    }
+
+    if((ant.gridX < centerX+12) && (ant.gridX > centerX-12)
+            && (ant.gridY < centerY+12) && (ant.gridY > centerY-12))
+    {
+      action.type = AntActionType.ENTER_NEST;
+      return true;
+    }
+
+    int dx = centerX - ant.gridX ;
+    int dy = centerY - ant.gridY ;
+    Direction direction = Direction.getDirection(dx,dy);
+    action.type = AntActionType.MOVE;
+    action.direction = direction;
+    //TODO:move towards HOME
+
+    return true;
   }
 
   private boolean dropOffLoadAtNest(AntData ant, AntAction action)
   {
     if(!ant.underground) return false;
 
+    action.direction = Direction.NORTH;
     action.type = AntActionType.DROP;
+    action.quantity = ant.carryUnits;
 
-    return false;
+    return true;
   }
 
   private boolean healAtNest(AntData ant, AntAction action)
@@ -303,34 +364,140 @@ public class ClientDustinLoughrin
 
     action.type = AntActionType.HEAL;
 
-    return false;
+    return true;
   }
 
   private boolean pickUpWater(AntData ant, AntAction action)
   {
+    int x,y;
+
+    for(Direction direction : Direction.values())
+    {
+      x = ant.gridX + direction.deltaX();
+      y = ant.gridY + direction.deltaY();
+      Pixel neighbor = localMap[x][y];
+
+      if(neighbor.contains == 'w'&& (ant.carryUnits < ((ant.antType.getCarryCapacity()/2)-1)))
+      {
+        action.type = AntActionType.PICKUP;
+        action.direction = direction;
+        action.quantity = ((ant.antType.getCarryCapacity() - ant.carryUnits)/2)-1;
+
+        return true;
+      }
+    }
+
     return false;
   }
 
   private boolean goToEnemyAnt(AntData ant, AntAction action)
   {
+    return false; //TODO:
+  }
+
+  private boolean goToFood(AntData ant, AntAction action, CommData data)
+  {
+    int distanceToFood;
+    if(!data.foodSet.isEmpty())
+    {
+      for (FoodData food : data.foodSet)
+      {
+        distanceToFood = AStar.manhattanDistance(ant.gridX,ant.gridY,food.gridX,food.gridY);
+        if(distanceToFood < 2)
+        {
+          return pickUpFoodAdjacent(ant,action,food);
+        }
+
+        if(distanceToFood < ant.antType.getVisionRadius()*4)
+        {
+          if(!(ant.carryType == FoodType.WATER))
+          {
+            int dx = food.gridX - ant.gridX  ;
+            int dy = food.gridY - ant.gridY ;
+            action.type = AntActionType.MOVE;
+            action.direction = Direction.getDirection(dx,dy);
+
+            return true; //TODO:GO TOWARDS FOOD HERE
+          }
+          return false;
+        }
+      }
+    }
+
     return false;
   }
 
-  private boolean goToFood(AntData ant, AntAction action)
+  private void birthAnt(AntData ant, CommData data)
   {
-    return false;
-  }
-
-  private boolean goToGoodAnt(AntData ant, AntAction action)
-  {
-    return false;
+    int minFood = 200;
+    int foodAmount = data.foodStockPile[FoodType.SEEDS.ordinal()] +
+            data.foodStockPile[FoodType.NECTAR.ordinal()] + data.foodStockPile[FoodType.MEAT.ordinal()];
+    if(data.myAntList.size() < 100 && foodAmount > 0)
+    {
+      if (data.foodStockPile[FoodType.SEEDS.ordinal()] > 0)
+      {
+        for (; (data.myAntList.size() < 100) && (foodAmount > 0); )
+        {
+          AntData newAnt = new AntData(ant);
+          newAnt.antType = AntType.WORKER;
+          data.myAntList.add(newAnt);
+        }
+      }
+      if (data.foodStockPile[FoodType.NECTAR.ordinal()] > 0)
+      {
+        for (; (data.myAntList.size() < 100) && (foodAmount > 0); )
+        {
+          AntData newAnt = new AntData(ant);
+          newAnt.antType = AntType.SPEED;
+          data.myAntList.add(newAnt);
+        }
+      }
+      if (data.foodStockPile[FoodType.MEAT.ordinal()] > 0)
+      {
+        for (; (data.myAntList.size() < 100) && (foodAmount > 0); )
+        {
+          AntData newAnt = new AntData(ant);
+          newAnt.antType = AntType.ATTACK;
+          data.myAntList.add(newAnt);
+        }
+      }
+    }
+    if (data.foodStockPile[FoodType.SEEDS.ordinal()] > minFood)
+    {
+      for (; (data.foodStockPile[FoodType.SEEDS.ordinal()] > minFood); )
+      {
+        AntData newAnt = new AntData(ant);
+        newAnt.antType = AntType.WORKER;
+        data.myAntList.add(newAnt);
+      }
+    }
+    if (data.foodStockPile[FoodType.NECTAR.ordinal()] > minFood)
+    {
+      for (; data.foodStockPile[FoodType.NECTAR.ordinal()] > minFood; )
+      {
+        AntData newAnt = new AntData(ant);
+        newAnt.antType = AntType.SPEED;
+        data.myAntList.add(newAnt);
+      }
+    }
+    if (data.foodStockPile[FoodType.MEAT.ordinal()] > minFood)
+    {
+      for (; (data.foodStockPile[FoodType.MEAT.ordinal()] > minFood); )
+      {
+        AntData newAnt = new AntData(ant);
+        newAnt.antType = AntType.ATTACK;
+        data.myAntList.add(newAnt);
+      }
+    }
   }
 
   private boolean goExplore(AntData ant, AntAction action)
-  {
-    Direction dir = Direction.getRandomDir();
+  {  //TODO:FIX THE ANTS RUNNING INTO EACH OTHER
+    int dx = ant.gridX - centerX;
+    int dy = ant.gridY - centerY;
+    Direction direction = Direction.getDirection(dx,dy);
     action.type = AntActionType.MOVE;
-    action.direction = dir;
+    action.direction = direction;
     return true;
   }
 
@@ -341,27 +508,22 @@ public class ClientDustinLoughrin
     
     if (ant.ticksUntilNextAction > 0) return action;
 
-    if (dropOffLoadAtNest(ant, action)) return action;
+    //birthAnt(ant,data);
 
-    if (healAtNest(ant, action)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action)) return action;
 
     if (exitNest(ant, action)) return action;
 
     if (attackAdjacent(ant, action)) return action;
 
-    if (pickUpFoodAdjacent(ant, action)) return action;
-
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
-
     if (pickUpWater(ant, action)) return action;
+
+    if (goToFood(ant, action, data)) return action;
 
     if (goToEnemyAnt(ant, action)) return action;
 
-    if (goToFood(ant, action)) return action;
-
-    if (goToGoodAnt(ant, action)) return action;
-
     if (goExplore(ant, action)) return action;
+
 
     return action;
   }
@@ -379,7 +541,7 @@ public class ClientDustinLoughrin
     String serverHost = "localhost";
     if (args.length > 0) serverHost = args[args.length -1];
 
-    TeamNameEnum team = TeamNameEnum.Linh_Dustin;
+    TeamNameEnum team = TeamNameEnum.RANDOM_WALKERS;
     if (args.length > 1)
     { team = TeamNameEnum.getTeamByString(args[0]);
     }
