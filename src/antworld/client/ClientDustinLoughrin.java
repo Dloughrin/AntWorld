@@ -281,6 +281,11 @@ public class ClientDustinLoughrin
 
     for(Direction direction : Direction.values())
     {
+      if(direction == Direction.NORTHEAST || direction ==  Direction.NORTHWEST ||
+        direction == Direction.SOUTHEAST || direction == Direction.SOUTHWEST)
+      {
+        continue;
+      }
       x = ant.gridX + direction.deltaX();
       y = ant.gridY + direction.deltaY();
       neighbor = localMap[x][y];
@@ -310,16 +315,16 @@ public class ClientDustinLoughrin
     return false;
   }
 
-  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
+  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action, CommData data)
   {
     if((ant.carryUnits > 0
-            || (ant.health < ((double)ant.antType.getMaxHealth()/4.0))))
+            || (ant.health < ((double)ant.antType.getMaxHealth()/2.0))))
     {
-      return goHome(ant, action);
+      return goHome(ant, action,data);
     }
     return false;
   }
-  private boolean goHome(AntData ant, AntAction action )
+  private boolean goHome(AntData ant, AntAction action, CommData data)
   {
     if(ant.underground && (ant.health < ant.antType.getMaxHealth()))
     {
@@ -330,8 +335,8 @@ public class ClientDustinLoughrin
       return dropOffLoadAtNest(ant, action);
     }
 
-    if((ant.gridX < centerX+12) && (ant.gridX > centerX-12)
-            && (ant.gridY < centerY+12) && (ant.gridY > centerY-12))
+    int nestDistance = AStar.manhattanDistance(ant.gridX,ant.gridY,centerX,centerY);
+    if(localMap[ant.gridX][ant.gridY].contains == 'n' && nestDistance <= Constants.NEST_RADIUS)
     {
       action.type = AntActionType.ENTER_NEST;
       return true;
@@ -339,10 +344,21 @@ public class ClientDustinLoughrin
 
     int dx = centerX - ant.gridX ;
     int dy = centerY - ant.gridY ;
+    int x, y;
     Direction direction = Direction.getDirection(dx,dy);
     action.type = AntActionType.MOVE;
     action.direction = direction;
-    //TODO:move towards HOME
+
+    for(AntData ants : data.myAntList)
+    {
+      x = ant.gridX + action.direction.deltaX();
+      y = ant.gridY + action.direction.deltaY();
+
+      if(ants.gridX == x && ants.gridY == y)
+      {
+        action.direction = Direction.getLeftDir(action.direction);
+      }
+    }
 
     return true;
   }
@@ -416,6 +432,17 @@ public class ClientDustinLoughrin
             int dy = food.gridY - ant.gridY ;
             action.type = AntActionType.MOVE;
             action.direction = Direction.getDirection(dx,dy);
+
+            for(AntData ants : data.myAntList)
+            {
+              int x = ant.gridX + action.direction.deltaX();
+              int y = ant.gridY + action.direction.deltaY();
+
+              if(ants.gridX == x && ants.gridY == y)
+              {
+                action.direction = Direction.getLeftDir(action.direction);
+              }
+            }
 
             return true; //TODO:GO TOWARDS FOOD HERE
           }
@@ -491,13 +518,25 @@ public class ClientDustinLoughrin
     }
   }
 
-  private boolean goExplore(AntData ant, AntAction action)
+  private boolean goExplore(AntData ant, AntAction action, CommData data)
   {  //TODO:FIX THE ANTS RUNNING INTO EACH OTHER
     int dx = ant.gridX - centerX;
     int dy = ant.gridY - centerY;
     Direction direction = Direction.getDirection(dx,dy);
     action.type = AntActionType.MOVE;
     action.direction = direction;
+
+    for(AntData ants : data.myAntList)
+    {
+      int x = ant.gridX + direction.deltaX();
+      int y = ant.gridY + direction.deltaY();
+
+      if(ants.gridX == x && ants.gridY == y)
+      {
+        action.direction = Direction.getLeftDir(direction);
+      }
+    }
+
     return true;
   }
 
@@ -510,7 +549,7 @@ public class ClientDustinLoughrin
 
     //birthAnt(ant,data);
 
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
 
     if (exitNest(ant, action)) return action;
 
@@ -522,7 +561,7 @@ public class ClientDustinLoughrin
 
     if (goToEnemyAnt(ant, action)) return action;
 
-    if (goExplore(ant, action)) return action;
+    if (goExplore(ant, action, data)) return action;
 
 
     return action;

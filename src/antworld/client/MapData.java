@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 
 /**
  * Created by Dustin on 12/10/2016.
- * Class to keep track of water. Wanted to keep track of nests as well, but I get a java heap space error on the AntWorld map
+ * Class to keep track of water and nests.
  */
 public class MapData
 {
@@ -37,6 +37,10 @@ public class MapData
         if(rgb == LandType.WATER.getMapColor())
         {
           contains = 'w'; //water
+        }
+        else if(rgb == LandType.NEST.getMapColor())
+        {
+          contains = 'n'; //nest
         }
         else
         {
