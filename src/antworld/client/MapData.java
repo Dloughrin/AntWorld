@@ -17,7 +17,7 @@ public class MapData
 
   public MapData()
   {
-    mapImage = Util.loadImage("Small.png", null);
+    mapImage = Util.loadImage("AntWorld.png", null);
     mapX = mapImage.getWidth();
     mapY = mapImage.getHeight();
     loadMapData();
